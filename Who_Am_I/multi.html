@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>我是誰</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+    #word {
+      font-size: 100px; /* 題目字體更大 */
+      margin: 20px;
+      font-weight: 900;
+      background-color: #f0f0f0;
+      display: inline-block;
+      padding: 30px 60px;
+      border-radius: 16px;
+      font-family: "Arial Black", "Microsoft JhengHei", sans-serif;
+    }
+    .btn-container {
+      display: flex;
+      justify-content: center;
+      gap: 25px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    button {
+      font-size: 26px;
+      padding: 15px 30px;
+      min-width: 140px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #timer {
+      font-size: 48px; /* 加大倒數 */
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    #scores {
+      font-size: 40px; /* 加大分數 */
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    #winner {
+      font-size: 60px;  /* 加大勝負判定 */
+      font-weight: 900; 
+      margin-top: 20px;
+      color: #d35400;
+    }
+    .team-btn {
+      background-color: #333;
+      color: white;
+    }
+    #controls {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    #timeInput {
+      font-size: 20px;
+      width: 100px;
+      text-align: center;
+    }
+    #result {
+      font-size: 28px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤔 我是誰 🤔</h1>
+  <p>主持人出題，小朋友回答，主持人幫忙加分！</p>
+
+  <div id="word">按「開始遊戲」開始</div>
+  <p id="result"></p>
+
+  <p id="timer">剩餘時間：-- 秒</p>
+
+  <h2>分數</h2>
+  <p id="scores">隊伍一：0 ｜ 隊伍二：0</p>
+  <p id="winner"></p>
+
+  <div class="btn-container">
+    <button class="team-btn" onclick="addScore('team1')">+1 隊伍一</button>
+    <button class="team-btn" onclick="addScore('team2')">+1 隊伍二</button>
+  </div>
+
+  <div id="controls">
+    <label>遊戲時間：<input type="number" id="timeInput" value="60" min="10"> 秒</label>
+    <button id="startBtn" onclick="restartGame()">開始遊戲</button>
+    <button id="resetBtn" onclick="resetGame()">重新開始</button>
+  </div>
+
+  <script>
+    const colors = ["紅", "藍", "綠", "橘"];
+    const colorMap = { "紅":"red","藍":"blue","綠":"green","橘":"orange" };
+
+    let currentColor = "";
+    let teamScores = { team1: 0, team2: 0 };
+    let timeLeft = 60;
+    let timerInterval = null;
+    let gameActive = false;
+
+    const wordDiv = document.getElementById("word");
+    const resultDiv = document.getElementById("result");
+    const scoresDisplay = document.getElementById("scores");
+    const timerDisplay = document.getElementById("timer");
+    const winnerDisplay = document.getElementById("winner");
+    const timeInput = document.getElementById("timeInput");
+    const startBtn = document.getElementById("startBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    function newRound() {
+      const text = colors[Math.floor(Math.random() * colors.length)];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      currentColor = color;
+      wordDiv.textContent = text;
+      wordDiv.style.color = colorMap[color];
+    }
+
+    function addScore(team) {
+      if (!gameActive) return;
+      teamScores[team]++;
+      scoresDisplay.textContent = `隊伍一：${teamScores.team1} ｜ 隊伍二：${teamScores.team2}`;
+      resultDiv.textContent = '';
+      newRound();
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `剩餘時間：${timeLeft} 秒`;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          gameActive = false;
+          timerDisplay.textContent = "⏰ 時間到！遊戲結束！";
+          declareWinner();
+          startBtn.disabled = false;
+        }
+      }, 1000);
+    }
+
+    function declareWinner() {
+      if (teamScores.team1 > teamScores.team2) {
+        winnerDisplay.textContent = "🏆 隊伍一獲勝！";
+      } else if (teamScores.team2 > teamScores.team1) {
+        winnerDisplay.textContent = "🏆 隊伍二獲勝！";
+      } else {
+        winnerDisplay.textContent = "🤝 平手！";
+      }
+    }
+
+    function restartGame() {
+      if (gameActive && timerInterval) clearInterval(timerInterval);
+
+      timeLeft = parseInt(timeInput.value, 10);
+      if (isNaN(timeLeft) || timeLeft <= 0) timeLeft = 60;
+
+      teamScores = { team1: 0, team2: 0 };
+      scoresDisplay.textContent = `隊伍一：0 ｜ 隊伍二：0`;
+      resultDiv.textContent = "";
+      winnerDisplay.textContent = "";
+      timerDisplay.textContent = `剩餘時間：${timeLeft} 秒`;
+
+      gameActive = true;
+      startBtn.disabled = true;
+
+      // 準備 3 秒倒數
+      let prep = 3;
+      wordDiv.style.color = "black";
+      wordDiv.textContent = `準備 ${prep}`;
+      const prepInterval = setInterval(() => {
+        prep--;
+        if (prep > 0) {
+          wordDiv.textContent = `準備 ${prep}`;
+        } else {
+          clearInterval(prepInterval);
+          newRound();
+          startTimer();
+        }
+      }, 1000);
+    }
+
+    function resetGame() {
+      if (timerInterval) clearInterval(timerInterval);
+      gameActive = false;
+
+      teamScores = { team1: 0, team2: 0 };
+      scoresDisplay.textContent = `隊伍一：0 ｜ 隊伍二：0`;
+      resultDiv.textContent = "";
+      winnerDisplay.textContent = "";
+      timerDisplay.textContent = "剩餘時間：-- 秒";
+      wordDiv.style.color = "black";
+      wordDiv.textContent = "按「開始遊戲」開始";
+      startBtn.disabled = false;
+    }
+
+    (function init() {
+      resetGame();
+    })();
+  </script>
+</body>
+</html>

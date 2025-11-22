@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>我是誰</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    h1 {
+      font-size: 40px;
+    }
+    .instruction {
+      font-size: 24px;
+      margin: 20px 0;
+    }
+    #word {
+      font-size: 48px;
+      margin: 20px 0;
+      padding: 20px;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+      display: inline-block;
+      min-width: 200px;
+    }
+    button {
+      font-size: 24px;
+      padding: 15px 30px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+    }
+    #score, #result, #timer {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>我是誰</h1>
+  <p class="instruction">請選出<strong>字的顏色</strong>，而不是文字內容！</p>
+
+  <div id="word">按開始開始遊戲！</div>
+  
+  <div>
+    <button onclick="checkAnswer('red')" style="background-color: red; color: white;">紅色</button>
+    <button onclick="checkAnswer('blue')" style="background-color: blue; color: white;">藍色</button>
+    <button onclick="checkAnswer('green')" style="background-color: green; color: white;">綠色</button>
+    <button onclick="checkAnswer('orange')" style="background-color: orange; color: white;">橘色</button>
+  </div>
+
+  <p id="score">得分：0</p>
+  <p id="result"></p>
+  <p id="timer">剩餘時間：60 秒</p>
+
+  <button onclick="startGame()">開始遊戲</button>
+
+  <script>
+    const colors = ["red", "blue", "green", "orange"];
+    const colorNames = {
+      red: "紅色",
+      blue: "藍色",
+      green: "綠色",
+      orange: "橘色"
+    };
+
+    let score = 0;
+    let correctColor = "";
+    let timer = 60;
+    let timerInterval = null;
+    let gameActive = false;
+
+    function newWord() {
+      const text = colors[Math.floor(Math.random() * colors.length)];
+      correctColor = colors[Math.floor(Math.random() * colors.length)];
+
+      const wordDiv = document.getElementById("word");
+      wordDiv.textContent = colorNames[text];
+      wordDiv.style.color = correctColor;
+    }
+
+    function checkAnswer(choice) {
+      if (!gameActive) return;
+      if (choice === correctColor) {
+        score++;
+        document.getElementById("result").textContent = "✅ 答對了！";
+      } else {
+        document.getElementById("result").textContent = "❌ 答錯了！";
+      }
+      document.getElementById("score").textContent = "得分：" + score;
+      newWord();
+    }
+
+    function startGame() {
+      score = 0;
+      timer = 60;
+      gameActive = true;
+      document.getElementById("score").textContent = "得分：0";
+      document.getElementById("result").textContent = "";
+      document.getElementById("timer").textContent = "剩餘時間：60 秒";
+      newWord();
+
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerInterval = setInterval(() => {
+        timer--;
+        document.getElementById("timer").textContent = "剩餘時間：" + timer + " 秒";
+
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          gameActive = false;
+          document.getElementById("result").textContent = "⏰ 時間到！你的總分：" + score;
+          document.getElementById("word").textContent = "遊戲結束";
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
