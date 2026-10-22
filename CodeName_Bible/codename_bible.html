@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>行動代號：聖經密碼 (Bible Codenames)</title>
+  <style>
+    :root {
+      --gold: #f3c669;
+      --panel: #1e1e2d;
+      --red: #dc2626;
+      --blue: #2563eb;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    body {
+      background: #121218;
+      color: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 12px;
+    }
+    h1 {
+      color: var(--gold);
+      font-size: 2rem;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+    .status-bar, .controls, .rules-panel, .grid { width: 100%; max-width: 680px; }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--panel);
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(243, 198, 105, 0.2);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .score-box {
+      font-weight: bold;
+      padding: 6px 14px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .score-red  { background: #451a1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .score-blue { background: #162a45; color: #93c5fd; border: 1px solid #3b82f6; }
+    .turn-indicator { font-weight: bold; font-size: 1.1rem; text-align: center; }
+
+    .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+    .controls-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 9px 16px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-rules    { background: #d97706; }
+    .btn-restart  { background: #4b5563; }
+    .btn-first    { background: #7c3aed; }
+    .btn-download { background: #059669; }
+    .btn-toggle   { background: #b45309; }
+    .btn-toggle.active { background: #dc2626; }
+    .btn-end-turn { background: var(--blue); }
+
+    /* 規則面板 */
+    .rules-panel {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .rules-panel.show { display: block; animation: fadeIn 0.3s ease; }
+    .rules-panel h2 {
+      color: var(--gold);
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(243, 198, 105, 0.3);
+      padding-bottom: 6px;
+    }
+    .rules-section { margin-bottom: 14px; }
+    .rules-section h3 { color: #9ca3af; font-size: 1rem; margin-bottom: 6px; }
+    .rules-list { padding-left: 20px; color: #d1d5db; font-size: 0.95rem; line-height: 1.6; }
+    .rules-list li { margin-bottom: 4px; }
+    .rules-list strong { color: var(--gold); }
+
+    /* 5x5 盤面 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      aspect-ratio: 1 / 1;
+    }
+    .card {
+      background: #e2d9c8;
+      color: #2d261e;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6px;
+      font-size: 1.05rem;
+      font-weight: bold;
+      word-break: break-all;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: transform 0.15s, background-color 0.3s;
+    }
+    .card:hover:not(.revealed) { transform: translateY(-3px); background: #f0e4d0; }
+    .card.revealed { cursor: default; }
+
+    .card.revealed.RED      { background: var(--red);  color: #fff; }
+    .card.revealed.BLUE     { background: var(--blue); color: #fff; }
+    .card.revealed.NEUTRAL  { background: #6b7280; color: #f3f4f6; }
+    .card.revealed.ASSASSIN { background: #111827; color: #ef4444; border: 2px solid #ef4444; }
+
+    /* 隊長視角：未翻開的牌顯示底色 */
+    .spymaster-mode .card:not(.revealed).RED      { border: 3px solid #ef4444; background: #fecaca; color: #991b1b; }
+    .spymaster-mode .card:not(.revealed).BLUE     { border: 3px solid #3b82f6; background: #bfdbfe; color: #1e40af; }
+    .spymaster-mode .card:not(.revealed).NEUTRAL  { border: 3px solid #9ca3af; background: #e5e7eb; color: #374151; }
+    .spymaster-mode .card:not(.revealed).ASSASSIN { border: 3px solid #000;    background: #374151; color: #f87171; }
+
+    /* 結算彈窗 */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--panel);
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 420px;
+      border: 2px solid var(--gold);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .modal-content h2 { color: var(--gold); margin-bottom: 15px; font-size: 1.8rem; }
+    .modal-content p { font-size: 1.15rem; margin-bottom: 24px; color: #e5e7eb; }
+    .modal-actions { display: flex; gap: 10px; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 550px) {
+      h1 { font-size: 1.5rem; }
+      .card { font-size: 0.85rem; padding: 2px; }
+      .status-bar { padding: 8px 12px; }
+      .score-box { font-size: 0.8rem; padding: 4px 8px; }
+      .turn-indicator { font-size: 0.9rem; }
+      button { font-size: 0.85rem; padding: 7px 12px; min-width: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>行動代號：聖經密碼</h1>
+
+  <div class="status-bar">
+    <div class="score-box score-red">以色列隊(紅) 剩餘 <span id="remain-RED">0</span></div>
+    <div class="turn-indicator" id="turn-indicator"></div>
+    <div class="score-box score-blue">猶大隊(藍) 剩餘 <span id="remain-BLUE">0</span></div>
+  </div>
+
+  <div class="controls">
+    <div class="controls-row">
+      <button class="btn-restart" onclick="initGame()">重新開局</button>
+      <button class="btn-first" id="btn-first" onclick="switchFirstTeam()">切換先手隊伍</button>
+      <button class="btn-end-turn" id="btn-end-turn" onclick="switchTurn()">結束回合</button>
+    </div>
+    <div class="controls-row">
+      <button class="btn-rules" onclick="toggleRules()">📜 遊戲規則</button>
+      <button class="btn-download" onclick="downloadSpymasterImage()">下載隊長答案圖</button>
+      <button class="btn-toggle" id="toggle-spymaster" onclick="toggleSpymaster()">隊長視角：關</button>
+    </div>
+  </div>
+
+  <div class="rules-panel" id="rules-panel">
+    <h2>📜 遊戲規則</h2>
+
+    <div class="rules-section">
+      <h3>🎯 1. 遊戲目標</h3>
+      <ul class="rules-list">
+        <li>率先找出己方所有<strong>屬靈密碼（聖經詞彙卡）</strong>，同時避開撒旦卡。</li>
+      </ul>
+    </div>
+
+    <div class="rules-section">
+      <h3>👥 2. 隊伍與盤面</h3>
+      <ul class="rules-list">
+        <li>分為<strong>以色列隊（紅）</strong>與<strong>猶大隊（藍）</strong>，各隊選 1 位<strong>隊長</strong>（給提示），其餘為<strong>隊員</strong>（猜牌）。</li>
+        <li>盤面 25 張：<strong>先手隊 9 張</strong>、<strong>後手隊 8 張</strong>、中立 7 張、<strong>撒旦 1 張</strong>。</li>
+        <li>只有兩位隊長能看到答案：請用「下載隊長答案圖」傳給隊長，或由隊長在私人裝置上開啟。「隊長視角」會讓所有人看見答案，請勿在公開螢幕上開啟。</li>
+        <li>「切換先手隊伍」只在尚未翻牌時可用，會對調雙方顏色，詞彙不變。</li>
+      </ul>
+    </div>
+
+    <div class="rules-section">
+      <h3>🔄 3. 回合流程</h3>
+      <ul class="rules-list">
+        <li><strong>給提示：</strong>隊長說出「1 個詞 + 1 個數字」（例：「禱告，2」），數字代表與該詞相關的己方牌數。提示詞<strong>不得是盤面上任何一張牌的字</strong>（含包含該牌文字的詞），也不得以手勢、語氣或暗示傳達位置。給完提示後隊長不得再發言。</li>
+        <li><strong>猜牌：</strong>隊員討論後點選卡片。每回合<strong>至少要猜 1 張</strong>，最多可猜「數字 + 1」張。</li>
+        <li><strong>猜中己方牌：</strong>己方剩餘張數 −1，可繼續猜，或按「結束回合」停手。</li>
+        <li><strong>猜中對方牌：</strong>對方剩餘張數 −1，<strong>回合立即結束</strong>。</li>
+        <li><strong>猜中中立牌：</strong>無人得分，<strong>回合立即結束</strong>。</li>
+        <li><strong>猜中撒旦牌：立即敗北</strong>。</li>
+      </ul>
+    </div>
+
+    <div class="rules-section">
+      <h3>🏆 4. 勝負判定</h3>
+      <ul class="rules-list">
+        <li><strong>常規勝利：</strong>某隊的剩餘張數歸零即獲勝（包含被對方誤翻開最後一張的情況）。</li>
+        <li><strong>撒旦敗北：</strong>任何一隊翻開<strong>撒旦卡</strong>，該隊立即敗北，對手獲勝。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <canvas id="spymaster-canvas" width="800" height="900" hidden></canvas>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="modal-title"></h2>
+      <p id="modal-msg"></p>
+      <div class="modal-actions">
+        <button class="btn-toggle" onclick="reviewBoard()">查看盤面</button>
+        <button class="btn-restart" onclick="initGame()">再玩一局</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const BIBLE_WORDS = [
+      // ── 舊約英雄與人物 (25) ──
+      "亞當", "夏娃", "該隱", "亞伯", "挪亞",
+      "亞伯拉罕", "雅各", "約瑟", "法老", "摩西",
+      "約書亞", "參孫", "路得", "撒母耳", "掃羅",
+      "大衛", "歌利亞", "所羅門", "以利亞", "乃縵",
+      "尼希米", "但以理", "以斯帖", "約伯", "約拿",
+      // ── 新約人物 (23) ──
+      "施洗者", "耶穌", "馬利亞", "東方博士", "彼得",
+      "安得烈", "約翰", "腓力", "拿但業", "馬太",
+      "多馬", "加略人猶大", "司提反", "保羅", "巴拿巴",
+      "拉撒路", "馬大", "抹大拉的馬利亞", "撒該", "尼哥底母",
+      "彼拉多", "路加", "提摩太",
+      // ── 經典神蹟與故事 (33) ──
+      "創世七日", "伊甸園", "生命樹", "方舟", "彩虹之約",
+      "巴別塔", "十災", "分紅海", "雲柱火柱", "嗎哪",
+      "擊打磐石", "十誡", "金牛犢", "獅子坑", "大魚",
+      "水變酒", "畢士大池", "五餅二魚", "履海", "平靜風浪",
+      "登山變相", "洗腳", "最後晚餐", "親吻為號", "三十塊銀錢",
+      "雞叫三次", "十字架", "寶血", "空墳墓", "復活",
+      "升天", "新天新地", "黃金街道",
+      // ── 生活化比喻與物件 (40) ──
+      "芥菜種", "浪子回頭", "好撒瑪利亞人", "撒種的比喻", "麵酵的比喻",
+      "藏寶於田", "重價珍珠", "十個童女", "按才幹受託", "羊圈",
+      "好牧人", "失羊的比喻", "失錢的比喻", "葡萄樹與枝子", "無花果樹",
+      "鹽與光", "窄門", "建在磐石上", "建在沙土上", "麥子與稗子",
+      "網聚各樣魚", "新酒裝在新皮袋", "無知富戶", "葡萄園工人", "彩衣",
+      "約櫃", "銅蛇", "馬槽", "黃金乳香沒藥", "棕樹枝",
+      "香膏", "真理束腰", "公義護心鏡", "平安福音鞋", "信德盾牌",
+      "救恩頭盔", "聖靈寶劍", "生命冊", "逾越節羔羊", "聖餐",
+      // ── 地名與信仰詞彙 (30) ──
+      "伯利恆", "拿撒勒", "加利利海", "約旦河", "耶路撒冷",
+      "橄欖山", "客西馬尼園", "各各他", "迦南地", "埃及",
+      "紅海", "西奈山", "巴比倫", "大馬士革", "哥林多",
+      "天國", "福音", "信心", "盼望", "仁愛",
+      "聖靈果子", "禱告", "禁食", "奉獻", "洗禮",
+      "安息日", "大使命", "五旬節", "聖殿", "以弗所"
+    ];
+
+    const TEAMS = {
+      RED:  { name: '以色列隊', tag: '紅', color: '#dc2626', light: '#ef4444', text: '#fca5a5' },
+      BLUE: { name: '猶大隊',   tag: '藍', color: '#2563eb', light: '#3b82f6', text: '#93c5fd' }
+    };
+    const other = team => (team === 'RED' ? 'BLUE' : 'RED');
+    const teamLabel = team => `${TEAMS[team].name}(${TEAMS[team].tag})`;
+
+    let cards = [];
+    let firstTeam = 'RED';
+    let currentTurn = 'RED';
+    let remaining = { RED: 0, BLUE: 0 };
+    let isSpymaster = false;
+    let gameOver = false;
+
+    const $ = id => document.getElementById(id);
+
+    // Fisher-Yates 洗牌（取代偏誤的 sort(random)）
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function toggleRules() { $('rules-panel').classList.toggle('show'); }
+
+    function setSpymaster(on) {
+      isSpymaster = on;
+      $('toggle-spymaster').textContent = `隊長視角：${on ? '開' : '關'}`;
+      $('toggle-spymaster').classList.toggle('active', on);
+      $('grid').classList.toggle('spymaster-mode', on);
+    }
+    function toggleSpymaster() { setSpymaster(!isSpymaster); }
+
+    function recount() {
+      remaining.RED = cards.filter(c => c.role === 'RED' && !c.revealed).length;
+      remaining.BLUE = cards.filter(c => c.role === 'BLUE' && !c.revealed).length;
+    }
+
+    function initGame() {
+      gameOver = false;
+      setSpymaster(false);
+      $('modal').classList.remove('show');
+
+      firstTeam = Math.random() < 0.5 ? 'RED' : 'BLUE';
+      currentTurn = firstTeam;
+
+      const roles = shuffle([
+        ...Array(9).fill(firstTeam),
+        ...Array(8).fill(other(firstTeam)),
+        ...Array(7).fill('NEUTRAL'),
+        'ASSASSIN'
+      ]);
+
+      cards = shuffle([...BIBLE_WORDS]).slice(0, 25).map((word, i) => ({
+        word, role: roles[i], revealed: false
+      }));
+
+      recount();
+      render();
+    }
+
+    // 只在尚未翻牌時可用：對調雙方顏色，詞彙與位置不變
+    function switchFirstTeam() {
+      if (gameOver || cards.some(c => c.revealed)) return;
+      cards.forEach(c => {
+        if (c.role === 'RED' || c.role === 'BLUE') c.role = other(c.role);
+      });
+      firstTeam = other(firstTeam);
+      currentTurn = firstTeam;
+      recount();
+      render();
+    }
+
+    function handleCardClick(card) {
+      if (card.revealed || gameOver || isSpymaster) return;
+      card.revealed = true;
+
+      if (card.role === 'ASSASSIN') {
+        endGame(other(currentTurn), 'ASSASSIN');
+      } else if (card.role === 'NEUTRAL') {
+        currentTurn = other(currentTurn);
+      } else {
+        remaining[card.role]--;
+        if (remaining[card.role] === 0) endGame(card.role, 'ALL_FOUND');
+        else if (card.role !== currentTurn) currentTurn = other(currentTurn);
+      }
+      render();
+    }
+
+    function switchTurn() {
+      if (gameOver) return;
+      currentTurn = other(currentTurn);
+      render();
+    }
+
+    function render() {
+      $('remain-RED').textContent = remaining.RED;
+      $('remain-BLUE').textContent = remaining.BLUE;
+
+      const turnEl = $('turn-indicator');
+      turnEl.textContent = gameOver ? '遊戲結束' : `當前回合：${teamLabel(currentTurn)}`;
+      turnEl.style.color = gameOver ? '#e5e7eb' : TEAMS[currentTurn].text;
+
+      $('btn-first').disabled = gameOver || cards.some(c => c.revealed);
+      $('btn-end-turn').disabled = gameOver;
+
+      const grid = $('grid');
+      grid.innerHTML = '';
+      cards.forEach(card => {
+        const el = document.createElement('div');
+        el.className = `card ${card.role}${card.revealed ? ' revealed' : ''}`;
+        el.textContent = card.word;
+        el.onclick = () => handleCardClick(card);
+        grid.appendChild(el);
+      });
+    }
+
+    function endGame(winner, reason) {
+      gameOver = true;
+      const name = teamLabel(winner);
+      if (reason === 'ALL_FOUND') {
+        $('modal-title').textContent = '🎉 任務完成！';
+        $('modal-msg').textContent = `恭喜 ${name} 找齊了所有屬靈密碼！`;
+      } else {
+        $('modal-title').textContent = '☠️ 踩中撒旦！';
+        $('modal-msg').textContent = `${teamLabel(other(winner))} 翻開了撒旦卡，${name} 直接獲勝！`;
+      }
+      $('modal').classList.add('show');
+    }
+
+    // 關閉彈窗並以隊長視角檢視完整盤面
+    function reviewBoard() {
+      $('modal').classList.remove('show');
+      setSpymaster(true);
+    }
+
+    // ── 隊長答案圖（手動下載，不再於開局自動觸發） ──
+    function drawRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function downloadSpymasterImage() {
+      const canvas = $('spymaster-canvas');
+      const ctx = canvas.getContext('2d');
+      const fontFamily = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+
+      ctx.fillStyle = '#1a1a24';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+
+      ctx.fillStyle = '#f3c669';
+      ctx.font = `bold 32px ${fontFamily}`;
+      ctx.fillText('行動代號：聖經密碼 - 隊長答案卡', 400, 50);
+
+      ctx.fillStyle = TEAMS[firstTeam].light;
+      ctx.font = `bold 22px ${fontFamily}`;
+      ctx.fillText(`先手：${teamLabel(firstTeam)} 9 張`, 400, 90);
+
+      const fills = { RED: '#dc2626', BLUE: '#2563eb', NEUTRAL: '#9ca3af', ASSASSIN: '#111827' };
+      const size = 130, gap = 12, startX = 50, startY = 120, perLine = 6;
+
+      cards.forEach((card, i) => {
+        const x = startX + (i % 5) * (size + gap);
+        const y = startY + Math.floor(i / 5) * (size + gap);
+
+        ctx.fillStyle = fills[card.role];
+        drawRoundRect(ctx, x, y, size, size, 10);
+        ctx.fill();
+
+        if (card.role === 'ASSASSIN') {
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        }
+
+        // 長詞自動換行
+        const lines = [];
+        for (let k = 0; k < card.word.length; k += perLine) lines.push(card.word.slice(k, k + perLine));
+        ctx.fillStyle = card.role === 'NEUTRAL' ? '#1f2937' : '#ffffff';
+        ctx.font = `bold 18px ${fontFamily}`;
+        ctx.textBaseline = 'middle';
+        const lineH = 24;
+        lines.forEach((line, n) => {
+          ctx.fillText(line, x + size / 2, y + size / 2 + (n - (lines.length - 1) / 2) * lineH);
+        });
+      });
+
+      const link = document.createElement('a');
+      const t = new Date();
+      const stamp = [t.getHours(), t.getMinutes(), t.getSeconds()].map(n => String(n).padStart(2, '0')).join('');
+      link.download = `Bible_Codenames_Map_${stamp}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.click();
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
