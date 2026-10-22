@@ -107,6 +107,7 @@
     .rules-section h3 { color: #9ca3af; font-size: 1rem; margin-bottom: 6px; }
     .rules-list { padding-left: 20px; color: #d1d5db; font-size: 0.95rem; line-height: 1.6; }
     .rules-list li { margin-bottom: 4px; }
+    .rules-list .rules-list { list-style: disc; padding-left: 22px; margin-top: 4px; }
     .rules-list strong { color: var(--gold); }
 
     /* 5x5 盤面 */
@@ -170,6 +171,8 @@
     .modal-content h2 { color: var(--gold); margin-bottom: 15px; font-size: 1.8rem; }
     .modal-content p { font-size: 1.15rem; margin-bottom: 24px; color: #e5e7eb; }
     .modal-actions { display: flex; gap: 10px; }
+    .team-RED  { color: #fca5a5; font-weight: bold; }
+    .team-BLUE { color: #93c5fd; font-weight: bold; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-8px); }
@@ -199,7 +202,7 @@
     <div class="controls-row">
       <button class="btn-restart" onclick="initGame()">重新開局</button>
       <button class="btn-first" id="btn-first" onclick="switchFirstTeam()">切換先手隊伍</button>
-      <button class="btn-end-turn" id="btn-end-turn" onclick="switchTurn()">結束回合</button>
+      <button class="btn-end-turn" id="btn-end-turn" onclick="switchTurn()">換手</button>
     </div>
     <div class="controls-row">
       <button class="btn-rules" onclick="toggleRules()">📜 遊戲規則</button>
@@ -221,8 +224,16 @@
     <div class="rules-section">
       <h3>👥 2. 隊伍與盤面</h3>
       <ul class="rules-list">
-        <li>分為<strong>以色列隊（紅）</strong>與<strong>猶大隊（藍）</strong>，各隊選 1 位<strong>隊長</strong>（給提示），其餘為<strong>隊員</strong>（猜牌）。</li>
-        <li>盤面 25 張：<strong>先手隊 9 張</strong>、<strong>後手隊 8 張</strong>、中立 7 張、<strong>撒旦 1 張</strong>。</li>
+        <li>分為<span class="team-RED">以色列隊（紅）</span>與<span class="team-BLUE">猶大隊（藍）</span>，各隊選 1 位<strong>隊長</strong>（給提示），其餘為<strong>隊員</strong>（猜牌）。</li>
+        <li>
+          盤面共 <strong>25 張</strong>：
+          <ul class="rules-list">
+            <li><strong>先手隊：</strong>9 張</li>
+            <li><strong>後手隊：</strong>8 張</li>
+            <li><strong>中立：</strong>7 張</li>
+            <li><strong>撒旦：</strong>1 張</li>
+          </ul>
+        </li>
         <li>只有兩位隊長能看到答案：請用「下載隊長答案圖」傳給隊長，或由隊長在私人裝置上開啟。「隊長視角」會讓所有人看見答案，請勿在公開螢幕上開啟。</li>
         <li>「切換先手隊伍」只在尚未翻牌時可用，會對調雙方顏色，詞彙不變。</li>
       </ul>
@@ -230,14 +241,26 @@
 
     <div class="rules-section">
       <h3>🔄 3. 回合流程</h3>
-      <ul class="rules-list">
-        <li><strong>給提示：</strong>隊長說出「1 個詞 + 1 個數字」（例：「禱告，2」），數字代表與該詞相關的己方牌數。提示詞<strong>不得是盤面上任何一張牌的字</strong>（含包含該牌文字的詞），也不得以手勢、語氣或暗示傳達位置。給完提示後隊長不得再發言。</li>
-        <li><strong>猜牌：</strong>隊員討論後點選卡片。每回合<strong>至少要猜 1 張</strong>，最多可猜「數字 + 1」張。</li>
-        <li><strong>猜中己方牌：</strong>己方剩餘張數 −1，可繼續猜，或按「結束回合」停手。</li>
-        <li><strong>猜中對方牌：</strong>對方剩餘張數 −1，<strong>回合立即結束</strong>。</li>
-        <li><strong>猜中中立牌：</strong>無人得分，<strong>回合立即結束</strong>。</li>
-        <li><strong>猜中撒旦牌：立即敗北</strong>。</li>
-      </ul>
+      <ol class="rules-list">
+        <li>
+          <strong>給提示：</strong>隊長說出「1 個詞 + 1 個數字」（例：「禱告，2」），數字代表與該詞相關的己方牌數。
+          <ul class="rules-list">
+            <li>提示詞<strong>不得是盤面上任何一張牌的字</strong>（含包含該牌文字的詞）。</li>
+            <li>不得以手勢、語氣或暗示傳達位置。</li>
+            <li>給完提示後隊長不得再發言。</li>
+          </ul>
+        </li>
+        <li>
+          <strong>猜牌：</strong>隊員討論後點選卡片。每回合<strong>至少要猜 1 張</strong>，最多可猜「數字 + 1」張。
+          <ul class="rules-list">
+            <li><strong>猜中己方牌：</strong>己方剩餘張數 −1，可繼續猜，或按「結束回合」停手。</li>
+            <li><strong>猜中對方牌：</strong>對方剩餘張數 −1，<strong>回合立即結束</strong>。</li>
+            <li><strong>猜中中立牌：</strong>無人得分，<strong>回合立即結束</strong>。</li>
+            <li><strong>猜中撒旦牌：</strong><strong>立即敗北</strong>，對手獲勝。</li>
+          </ul>
+        </li>
+        <li><strong>換手：</strong>回合結束後，換對方隊長給提示，重複步驟 1～2。</li>
+      </ol>
     </div>
 
     <div class="rules-section">
@@ -280,7 +303,7 @@
       "彼拉多", "路加", "提摩太",
       // ── 經典神蹟與故事 (33) ──
       "創世七日", "伊甸園", "生命樹", "方舟", "彩虹之約",
-      "巴別塔", "十災", "分紅海", "雲柱火柱", "嗎哪",
+      "巴別塔", "十災", "曠野四十年", "雲柱火柱", "嗎哪",
       "擊打磐石", "十誡", "金牛犢", "獅子坑", "大魚",
       "水變酒", "畢士大池", "五餅二魚", "履海", "平靜風浪",
       "登山變相", "洗腳", "最後晚餐", "親吻為號", "三十塊銀錢",
@@ -423,15 +446,17 @@
       });
     }
 
+    // 以隊伍顏色標示隊名（文字皆為程式內建常數，可安全使用 innerHTML）
+    const coloredTeam = team => `<span class="team-${team}">${teamLabel(team)}</span>`;
+
     function endGame(winner, reason) {
       gameOver = true;
-      const name = teamLabel(winner);
       if (reason === 'ALL_FOUND') {
         $('modal-title').textContent = '🎉 任務完成！';
-        $('modal-msg').textContent = `恭喜 ${name} 找齊了所有屬靈密碼！`;
+        $('modal-msg').innerHTML = `恭喜 ${coloredTeam(winner)} 找齊了所有屬靈密碼！`;
       } else {
         $('modal-title').textContent = '☠️ 踩中撒旦！';
-        $('modal-msg').textContent = `${teamLabel(other(winner))} 翻開了撒旦卡，${name} 直接獲勝！`;
+        $('modal-msg').innerHTML = `${coloredTeam(other(winner))} 翻開了撒旦卡，${coloredTeam(winner)} 直接獲勝！`;
       }
       $('modal').classList.add('show');
     }
