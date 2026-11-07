@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>聖經對對碰</title>
+<style>
+  :root { --gold: #f3c669; --panel: #1e1e2d; --red: #ef4444; --blue: #3b82f6; }
+  * { box-sizing: border-box; margin: 0; padding: 0;
+      font-family: -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  body { background: #121218; color: #f3f4f6; min-height: 100vh; display: flex;
+         flex-direction: column; align-items: center; padding: 16px 8px; }
+  h1 { color: var(--gold); font-size: 1.8rem; margin-bottom: 12px; text-align: center; }
+  .wrap { width: 100%; max-width: 900px; }
+
+  /* 隊伍配色（分數框、牌面、規則文字共用） */
+  .RED  { --fg: #fca5a5; --line: var(--red);  --score-bg: #451a1d; --card-bg: #7f1d1d; }
+  .BLUE { --fg: #93c5fd; --line: var(--blue); --score-bg: #162a45; --card-bg: #1e3a8a; }
+  .team-text { color: var(--fg); font-weight: bold; }
+
+  /* 頂部狀態列 */
+  .status-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+                background: var(--panel); padding: 10px 16px; border-radius: 12px; margin-bottom: 12px;
+                border: 1px solid rgba(243, 198, 105, 0.2); }
+  .team, .turn-wrap { display: flex; flex-direction: column; gap: 6px; }
+  .turn-wrap { align-items: center; }
+  .score-box { display: flex; flex-direction: column; align-items: center; min-width: 110px;
+               padding: 6px 14px; border-radius: 8px; font-weight: bold; border: 1px solid;
+               background: var(--score-bg); color: var(--fg); border-color: var(--line); transition: 0.3s; }
+  .score-box.active { box-shadow: 0 0 12px #eab308; transform: scale(1.05); }
+  #turn { font-weight: bold; font-size: 1.25rem; text-align: center; }
+
+  /* 按鈕 */
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  button { flex: 1; min-width: 110px; padding: 8px 14px; font-size: 0.95rem; font-weight: bold;
+           color: #fff; border: 0; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+  button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .green  { background: #059669; }
+  .blue   { background: #2563eb; }
+  .orange { background: #d97706; }
+  .shuffle-btn { flex: none; min-width: 0; padding: 12px 14px; font-size: 1.1rem; border-radius: 10px; background: #7c3aed; }
+  .switch-btn  { flex: none; min-width: 120px; padding: 12px 28px; font-size: 1.2rem; border-radius: 10px; }
+  .diff-btn { background: #374151; border: 2px solid transparent; }
+  .diff-btn.active { background: #92400e; border-color: var(--gold); color: var(--gold); }
+
+  /* 規則面板 */
+  #rules { display: none; background: var(--panel); border: 1px solid var(--gold);
+           border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  #rules.show { display: block; }
+  #rules h2 { color: var(--gold); font-size: 1.2rem; margin-bottom: 8px; }
+  #rules h3 { color: #9ca3af; font-size: 0.95rem; margin: 12px 0 4px; }
+  #rules ul { padding-left: 18px; color: #d1d5db; font-size: 0.9rem; line-height: 1.6; }
+  .level-mark { color: var(--gold); font-weight: bold; }
+
+  /* 牌桌：困難 10 欄 × 3 列、簡單 7 欄 × 2 列 */
+  #grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; }
+  #grid.easy { grid-template-columns: repeat(7, 1fr); }
+  .card { aspect-ratio: 1 / 1.1; cursor: pointer; perspective: 1000px; }
+  .inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s; transform-style: preserve-3d; }
+  .card.flipped .inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+          padding: 4px; border-radius: 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+          user-select: none; text-align: center; font-weight: bold; line-height: 1.2; }
+  .back { background: linear-gradient(135deg, #2a2a3c, #1a1a26); border: 1px solid #4a4a6a;
+          color: var(--gold); font-size: 1.1rem; }
+  .card:hover .back { border-color: var(--gold); }
+  .front { background: #e2d9c8; color: #2d261e; border: 2px solid var(--gold);
+           transform: rotateY(180deg); font-size: 0.85rem; word-break: break-all; }
+  .card:is(.RED, .BLUE) .front { background: var(--card-bg); color: var(--fg); border-color: var(--line); }
+
+  /* 結算彈窗 */
+  #modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85);
+           align-items: center; justify-content: center; z-index: 100; }
+  #modal.show { display: flex; }
+  .modal-box { background: var(--panel); padding: 24px; border-radius: 16px; text-align: center;
+               max-width: 380px; width: 90%; border: 2px solid var(--gold); }
+  .modal-box h2 { color: var(--gold); margin-bottom: 12px; }
+  .modal-box p { margin-bottom: 20px; font-size: 1.1rem; }
+
+  /* 手機版：5 欄 */
+  @media (max-width: 650px) {
+    #grid, #grid.easy { grid-template-columns: repeat(5, 1fr); }
+    .front { font-size: 0.75rem; }
+    h1 { font-size: 1.4rem; }
+    #turn { font-size: 1rem; }
+  }
+</style>
+</head>
+
+<body>
+  <h1>聖經對對碰</h1>
+
+  <!-- 分數與回合 -->
+  <div class="wrap status-bar">
+    <div class="team">
+      <div class="score-box RED" id="box-RED"><span>以色列隊</span><span id="score-RED"></span></div>
+      <button class="shuffle-btn" id="shuffle-RED" onclick="shuffleCards('RED')"></button>
+    </div>
+
+    <div class="turn-wrap">
+      <div id="turn"></div>
+      <button class="blue switch-btn" onclick="switchTurn()">換手</button>
+    </div>
+
+    <div class="team">
+      <div class="score-box BLUE" id="box-BLUE"><span>猶大隊</span><span id="score-BLUE"></span></div>
+      <button class="shuffle-btn" id="shuffle-BLUE" onclick="shuffleCards('BLUE')"></button>
+    </div>
+  </div>
+
+  <!-- 重新開局 + 難度 -->
+  <div class="wrap controls">
+    <button class="green" onclick="initGame()">重新開局</button>
+    <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">簡單</button>
+    <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">困難</button>
+  </div>
+
+  <!-- 遊戲規則 -->
+  <div class="wrap controls">
+    <button class="orange" onclick="$('rules').classList.toggle('show')">遊戲規則</button>
+  </div>
+
+  <div class="wrap" id="rules">
+    <h2>遊戲規則</h2>
+    <hr>
+
+    <h3>準備</h3>
+    <ul>
+      <li>
+        難度：
+        <ul>
+          <li>簡單（ 14 張，7 組詞彙 ）<span class="level-mark" id="mark-easy"></span></li>
+          <li>困難（ 30 張，15 組詞彙 ）<span class="level-mark" id="mark-hard"></span></li>
+        </ul>
+      </li>
+      <li>分為 <span class="RED team-text">以色列隊（ 紅 ）</span> 與 <span class="BLUE team-text">猶大隊（ 藍 ）</span> 輪流進行。</li>
+    </ul>
+
+    <h3>遊戲流程</h3>
+    <ul>
+      <li>
+        <strong>翻牌：</strong>每回合翻開 2 張牌。
+        <ul>
+          <li><strong>相同：</strong>獲得 1 分，並可繼續下一回合。</li>
+          <li><strong>不同：</strong>牌面蓋回，換對手進行。</li>
+        </ul>
+      </li>
+      <li><strong>換手：</strong>可選擇提早結束自己的回合。</li>
+      <li><strong>洗牌：</strong>每隊限用 1 次，必須在自己回合「翻牌前」使用，且<strong> 只打亂未配對的牌 </strong>。</li>
+    </ul>
+
+    <h3>勝負判定</h3>
+    <ul>
+      <li>當所有牌皆完成配對後遊戲結束，由<strong> 分數較高者 </strong>獲勝。</li>
+    </ul>
+  </div>
+
+  <!-- 牌桌 -->
+  <div class="wrap" id="grid"></div>
+
+  <!-- 結算彈窗 -->
+  <div id="modal">
+    <div class="modal-box">
+      <h2 id="modal-title"></h2>
+      <p id="modal-msg"></p>
+      <button class="green" onclick="initGame()">再玩一局</button>
+    </div>
+  </div>
+
+<script>
+  const WORDS = [
+    // ── 舊約英雄與人物 (25) ──
+    "亞當", "夏娃", "該隱", "亞伯", "挪亞",
+    "亞伯拉罕", "雅各", "約瑟", "法老", "摩西",
+    "約書亞", "參孫", "路得", "撒母耳", "掃羅",
+    "大衛", "歌利亞", "所羅門", "以利亞", "乃縵",
+    "尼希米", "但以理", "以斯帖", "約伯", "約拿",
+    // ── 新約人物 (23) ──
+    "施洗者", "耶穌", "馬利亞", "東方博士", "彼得",
+    "安得烈", "約翰", "腓力", "拿但業", "馬太",
+    "多馬", "加略人猶大", "司提反", "保羅", "巴拿巴",
+    "拉撒路", "馬大", "抹大拉的馬利亞", "撒該", "尼哥底母",
+    "彼拉多", "路加", "提摩太",
+    // ── 經典神蹟與故事 (33) ──
+    "創世七日", "伊甸園", "生命樹", "方舟", "彩虹之約",
+    "巴別塔", "十災", "曠野四十年", "雲柱火柱", "嗎哪",
+    "擊打磐石", "十誡", "金牛犢", "獅子坑", "大魚",
+    "水變酒", "畢士大池", "五餅二魚", "履海", "平靜風浪",
+    "登山變相", "洗腳", "最後晚餐", "親吻為號", "三十塊銀錢",
+    "雞叫三次", "十字架", "寶血", "空墳墓", "復活",
+    "升天", "新天新地", "黃金街道",
+    // ── 生活化比喻與物件 (40) ──
+    "芥菜種", "浪子回頭", "好撒瑪利亞人", "撒種的比喻", "麵酵的比喻",
+    "藏寶於田", "重價珍珠", "十個童女", "按才幹受託", "羊圈",
+    "好牧人", "失羊的比喻", "失錢的比喻", "葡萄樹與枝子", "無花果樹",
+    "鹽與光", "窄門", "建在磐石上", "建在沙土上", "麥子與稗子",
+    "網聚各樣魚", "新酒裝在新皮袋", "無知富戶", "葡萄園工人", "彩衣",
+    "約櫃", "銅蛇", "馬槽", "黃金乳香沒藥", "棕樹枝",
+    "香膏", "真理束腰", "公義護心鏡", "平安福音鞋", "信德盾牌",
+    "救恩頭盔", "聖靈寶劍", "生命冊", "逾越節羔羊", "聖餐",
+    // ── 地名與信仰詞彙 (30) ──
+    "伯利恆", "拿撒勒", "加利利海", "約旦河", "耶路撒冷",
+    "橄欖山", "客西馬尼園", "各各他", "迦南地", "埃及",
+    "紅海", "西奈山", "巴比倫", "大馬士革", "哥林多",
+    "天國", "福音", "信心", "盼望", "仁愛",
+    "聖靈果子", "禱告", "禁食", "奉獻", "洗禮",
+    "安息日", "大使命", "五旬節", "聖殿", "以弗所"
+    ];
+
+  const TEAMS = {
+    RED:  { name: '以色列隊', color: '#f87171' },
+    BLUE: { name: '猶大隊',   color: '#60a5fa' }
+  };
+  const LEVELS = { easy: 7, hard: 15 };  // 每個難度的配對組數
+
+  const $ = id => document.getElementById(id);
+  const other = team => (team === 'RED' ? 'BLUE' : 'RED');
+
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  let cards, open, scores, turn, lock, used;
+  let difficulty = 'hard';
+
+  function setDifficulty(level) {
+    if (level === difficulty) return;
+    difficulty = level;
+    initGame();
+  }
+
+  function initGame() {
+    scores = { RED: 0, BLUE: 0 };
+    used = { RED: false, BLUE: false };
+    turn = 'RED';
+    open = [];
+    lock = false;
+
+    $('modal').classList.remove('show');
+    $('grid').innerHTML = '';
+    $('grid').classList.toggle('easy', difficulty === 'easy');
+    for (const level in LEVELS) {
+      $('diff-' + level).classList.toggle('active', level === difficulty);
+      $('mark-' + level).textContent = level === difficulty ? '<< 當前難度' : '';
+    }
+
+    const words = shuffle([...WORDS]).slice(0, LEVELS[difficulty]);
+
+    cards = shuffle([...words, ...words]).map((word, index) => {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `<div class="inner">
+        <div class="face back">${index + 1}</div>
+        <div class="face front">${word}</div>
+      </div>`;
+
+      const card = { word, el, owner: null };
+      el.onclick = () => flip(card);
+      $('grid').appendChild(el);
+      return card;
+    });
+
+    render();
+  }
+
+  function render() {
+    for (const team in TEAMS) {
+      $('score-' + team).textContent = scores[team] + ' 分';
+      $('box-' + team).classList.toggle('active', turn === team);
+
+      const btn = $('shuffle-' + team);
+      btn.textContent = used[team] ? '洗牌（ 已用 ）' : '洗牌（ 剩 1 次 ）';
+      btn.disabled = used[team] || turn !== team || open.length > 0 || lock;
+    }
+
+    $('turn').textContent = '當前回合：' + TEAMS[turn].name;
+    $('turn').style.color = TEAMS[turn].color;
+
+    for (const card of cards) {
+      const { classList } = card.el;
+      classList.toggle('flipped', !!card.owner || open.includes(card));
+      classList.toggle('RED', card.owner === 'RED');
+      classList.toggle('BLUE', card.owner === 'BLUE');
+    }
+  }
+
+  function flip(card) {
+    if (lock || card.owner || open.includes(card)) return;
+
+    open.push(card);
+    if (open.length < 2) return render();
+
+    const [a, b] = open;
+
+    if (a.word === b.word) {
+      // 配對成功：加分，同隊繼續
+      a.owner = b.owner = turn;
+      scores[turn]++;
+      open = [];
+      render();
+      if (cards.every(c => c.owner)) setTimeout(showResult, 400);
+    } else {
+      // 配對失敗：蓋回去，換對手
+      lock = true;
+      render();
+      setTimeout(() => {
+        open = [];
+        lock = false;
+        turn = other(turn);
+        render();
+      }, 900);
+    }
+  }
+
+  // 只打亂未配對的牌：位置不變，詞彙互換
+  function shuffleCards(team) {
+    if (team !== turn || used[team] || open.length || lock) return;
+
+    used[team] = true;
+    const pool = cards.filter(c => !c.owner);
+    const words = shuffle(pool.map(c => c.word));
+
+    pool.forEach((card, i) => {
+      card.word = words[i];
+      card.el.querySelector('.front').textContent = card.word;
+    });
+
+    render();
+  }
+
+  function switchTurn() {
+    if (lock) return;
+    open = [];
+    turn = other(turn);
+    render();
+  }
+
+  function showResult() {
+    const { RED, BLUE } = scores;
+    const winner = RED > BLUE ? 'RED' : BLUE > RED ? 'BLUE' : null;
+
+    $('modal-title').textContent = winner ? `勝利屬於${TEAMS[winner].name}` : '雙方平手';
+    $('modal-msg').innerHTML = winner
+      ? `<span class="${winner} team-text">${TEAMS[winner].name}</span> 以 <strong>${scores[winner]} : ${scores[other(winner)]}</strong> 勝出！`
+      : `雙方均獲得 <strong>${RED} 分</strong>，不分勝負！`;
+    $('modal').classList.add('show');
+  }
+
+  initGame();
+</script>
+</body>
+</html>
