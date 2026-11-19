@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五月花號：新大陸的考驗</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+:root{--bg:#e9f0f1;--card:#fff;--ink:#14262e;--muted:#5c7078;--line:#cfdadd;--sea:#1f4e5a;--corn:#e3b23c;--share:#1f7a4a;--share-bg:#e1f3e8;--keep:#c2413a;--keep-bg:#fbe9e7;--think:#8a5a00;--think-bg:#fdefc8;--done:#1f4e5a;--done-bg:#d9eaef;--wait:#4a5f67;--wait-bg:#e3eaec;--out:#9aa9ae;--ok:#2e8b57;--t0:#2f6fd6;--t1:#e0731f;--t2:#8e4fd0;--t3:#d0408a}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1a1f;--card:#16262d;--ink:#e6eef0;--muted:#93a6ad;--line:#27404a;--sea:#5fa3b3;--share:#5cc98b;--share-bg:#173626;--keep:#ef7a72;--keep-bg:#3a1f1d;--think:#f0c75a;--think-bg:#3b3014;--done:#8cc6d4;--done-bg:#1c3a44;--wait:#a9bcc2;--wait-bg:#22363d;--out:#5b6e75;--t0:#6da2ff;--t1:#ff9a52;--t2:#b98af0;--t3:#f06cae}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:18px;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:1140px;margin:0 auto;padding:20px 16px 32px}
+h1{margin:0;font-size:clamp(22px,4vw,32px);font-weight:900;letter-spacing:.06em}
+h2{margin:0 0 12px;font-size:26px;text-align:center}
+.sub{margin:2px 0 18px;color:var(--muted);font-size:16px}
+
+/* 版面配置：上方左右等高並排，下方全寬手機掃描區 */
+.layout{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:960px){
+  .layout{grid-template-columns:1.75fr 1fr;align-items:stretch}
+  .qr-card{grid-column:1 / -1}
+}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column}
+
+/* 外環與中央事件區 (3x3 棋盤外環) */
+.board{display:grid;grid-template-columns:1fr 1.45fr 1fr;grid-template-rows:auto minmax(190px,auto) auto;gap:16px}
+@media(max-width:640px){
+  .board{grid-template-columns:repeat(3,1fr);gap:12px}
+}
+.ar{position:absolute;font-style:normal;font-size:16px;font-weight:900;color:var(--muted);width:16px;text-align:center;line-height:1}
+.a0,.a1{right:-16px;top:calc(50% - 8px)}
+.a2,.a3{bottom:-16px;left:calc(50% - 8px)}
+.a4,.a5{left:-16px;top:calc(50% - 8px)}
+.a6,.a7{top:-16px;left:calc(50% - 8px)}
+
+.cell{border:1px solid var(--line);border-radius:10px;padding:10px 8px;min-height:84px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:15px;font-weight:700;position:relative;background:var(--card)}
+.cell small{font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.cell.on{background:var(--sea);color:#fff;border-color:var(--sea)}
+.cell.on small{color:#e1eef1}
+.cell.on::after{content:"⛵";position:absolute;top:-11px;right:-4px;font-size:23px}
+
+.ctr{text-align:center}
+.event{grid-column:2;grid-row:2;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:16px 14px;border-radius:12px;background:var(--sea);color:#fff}
+.ev-round{font-size:14px;font-weight:900;background:rgba(255,255,255,.18);padding:2px 12px;border-radius:99px;margin-bottom:6px;letter-spacing:.05em}
+.event b{display:block;font-size:20px;margin-bottom:4px}
+.event span{display:block;font-size:15px;opacity:.92}
+#evDesc{white-space:pre-line;line-height:1.45}
+#hostApp h1,#hostApp .sub{text-align:center}
+.rules{margin:0 0 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;font-size:15px;line-height:1.5}
+.rules summary{cursor:pointer;padding:12px 16px;font-weight:900;font-size:26px;text-align:center;list-style:none;position:relative}
+.rules summary::-webkit-details-marker{display:none}
+.rules summary::after{content:"收起 ▲";position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:400;color:var(--muted)}
+.rules:not([open]) summary::after{content:"展開 ▼"}
+.rules-body{display:grid;gap:6px 24px;padding:0 16px 12px}
+@media(min-width:760px){.rules-body{grid-template-columns:1fr 1fr}}
+.rules ol,.rules ul{margin:6px 0 0;padding-left:28px}
+.rules li{margin:2px 0}
+.rules b{display:inline-block;margin-right:8px;padding:0 8px;border-radius:6px;background:var(--sea);color:#fff;font-size:14px}
+#evMove{white-space:pre-line;font-weight:700;opacity:1;margin:0 0 4px;color:var(--corn)}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px}
+button:focus-visible{outline:3px solid var(--corn);outline-offset:2px}
+.main{flex:1;min-width:180px;background:var(--corn);color:#1b1500;font-weight:900;font-size:20px;padding:14px 18px}
+.main:disabled{opacity:.45;cursor:not-allowed}
+.dice.idle{color:var(--muted);font-weight:400}
+.dice{min-width:52px;padding:0 16px;white-space:nowrap;height:52px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;font-size:30px;font-weight:900}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);padding:7px 14px;font-size:15px}
+.log{margin-top:14px;padding:12px 14px;border:2px solid var(--corn);background:var(--bg);border-radius:12px;font-size:16px;text-align:center;white-space:pre-line;min-height:48px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--out);margin-right:6px}
+.dot.on{background:var(--ok)}
+.chip{display:inline-block;margin:0 0 0 8px;padding:3px 10px;border-radius:99px;font-weight:700;font-size:15px;background:var(--bg)}
+.chip.h{background:var(--share-bg);color:var(--share)}
+.chip.s{background:var(--keep-bg);color:var(--keep)}
+.chip.think{background:var(--think-bg);color:var(--think)}
+.chip.done{background:var(--done-bg);color:var(--done)}
+.chip.wait{background:var(--wait-bg);color:var(--wait)}
+.tg{color:var(--share);font-weight:700}.tk{color:var(--keep);font-weight:700}
+.manual button[data-v="h"]{background:var(--share-bg);color:var(--share);border-color:var(--share)}
+.manual button[data-v="s"]{background:var(--keep-bg);color:var(--keep);border-color:var(--keep)}
+.manual{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:15px;color:var(--muted);margin-top:auto}
+.manual button{flex:1;min-width:52px;padding:8px 0;font-size:16px;font-weight:700;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.manual span{flex:none}
+
+/* 各組狀態自動撐滿與左側等高 */
+#teams{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:12px;flex:1}
+.tcell{border:3px solid var(--tc);border-radius:12px;padding:14px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0}
+.tcell .head b{color:var(--tc)}
+.tcell .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 0}
+.tcell .chip{margin-left:6px}
+.tcell .c{text-align:center;font-size:44px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.tcell .c small{font-size:14px;font-weight:400;color:var(--muted);margin-left:3px}
+.tcell.out{opacity:.55}
+
+/* 下方橫向 QR code 掃描區 */
+.head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:12px}
+.head h2{grid-column:2;margin:0}
+.head button{grid-column:3;justify-self:end}
+@media(max-width:640px){.head{grid-template-columns:1fr}.head button{grid-column:1;grid-row:1}.head h2{grid-column:1;grid-row:2}}
+.net{font-size:15px;color:var(--muted);margin:-6px 0 12px;text-align:center}
+.qrs{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(min-width:600px){.qrs{grid-template-columns:repeat(4,1fr)}}
+.qr{text-align:center;font-size:15px;padding:12px;border:1px solid var(--line);border-top:8px solid var(--tc);border-radius:12px;background:var(--bg)}
+.qr img{width:100%;max-width:140px;image-rendering:pixelated;background:#fff;border-radius:8px;padding:6px}
+.qr .nm{color:var(--tc);font-weight:700;margin-top:6px;font-size:16px}
+.qr .st{font-size:14px;color:var(--muted)}
+
+/* 手機畫面 */
+#phoneApp{border-top:10px solid var(--tc);min-height:100vh;display:flex;flex-direction:column;padding:16px;gap:12px;max-width:520px;margin:0 auto}
+.ph-top{display:flex;justify-content:space-between;align-items:flex-end}
+.ph-top h1{font-size:28px;color:var(--tc)}
+.ph-corn{font-size:51px;font-weight:900;line-height:1}
+.ph-corn small{font-size:15px;font-weight:400;color:var(--muted);margin-left:4px}
+.ph-info{background:var(--sea);color:#fff;border-radius:12px;padding:12px 14px}
+.ph-info .ev-round{display:inline-block;margin-bottom:4px}
+.ph-info b{display:block;font-size:20px}#pMove{font-weight:700;opacity:1!important;margin-bottom:4px;color:var(--corn)}
+.ph-info span{display:block;font-size:15px;opacity:.92;white-space:pre-line}
+.big{flex:1;min-height:20vh;font-size:34px;font-weight:900;border:4px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.big small{font-size:16px;font-weight:400}
+.big.h{background:var(--share-bg);color:var(--share)}
+.big.s{background:var(--keep-bg);color:var(--keep)}
+.big.sel{border-color:var(--corn);box-shadow:0 0 0 3px var(--corn)}
+.big:disabled{opacity:.4;cursor:not-allowed}
+.big.sel:disabled{opacity:1}
+.ph-msg{font-size:17px;text-align:center;min-height:24px}
+.ph-log{font-size:15px;color:var(--muted);white-space:pre-line;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- 主持人畫面 -->
+<div class="wrap" id="hostApp">
+  <h1>五月花號：新大陸的考驗</h1>
+  <p class="sub">誰能笑著站到最後？</p>
+  <details class="rules" open>
+    <summary>遊戲規則</summary>
+    <div class="rules-body">
+    <div class="flow"><b>流程</b>
+      <ol>
+        <li>擲骰前進 1–3 步</li>
+        <li>抵達格子，依事件加減玉米</li>
+        <li>各組秘密選「分享」或「私藏」玉米</li>
+        <li>亮牌結算</li>
+      </ol>
+    </div>
+    <div><b>結算</b>
+      <ul>
+        <li>全<span class="tg">分享</span>：各 +1</li>
+        <li>全<span class="tk">私藏</span>：第 1 次各 −2，之後每多一次再多扣 1（−2、−3、−4…）</li>
+        <li>混合：<span class="tg">分享</span> −2、<span class="tk">私藏</span> +3</li>
+        <li>不同冒險事件有額外的結算</li>
+      </ul>
+    </div>
+    <div><b>淘汰</b>每組起始 10 玉米，降至 0 即淘汰</div>
+    <div><b>勝利</b>10 回合後最高分（同分平手），或唯一存活</div>
+    </div>
+  </details>
+  <div class="layout">
+    <section class="card">
+      <div class="head">
+        <h2>普利茅斯冒險事件</h2>
+        <button class="ghost" id="resetAll">重新開始遊戲</button>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="bar">
+        <button class="main" id="mainBtn"></button>
+        <div class="dice" id="dice" aria-label="前進步數">? 步</div>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2>各組狀態</h2>
+      <div id="teams"></div>
+    </section>
+
+    <section class="card qr-card">
+      <h2>手機連線掃描</h2>
+      <p class="net" id="net">連線中…</p>
+      <div class="qrs" id="qrs"></div>
+    </section>
+  </div>
+</div>
+
+<!-- 手機畫面 -->
+<div id="phoneApp" hidden>
+  <div class="ph-top"><h1 id="pName">家族</h1><div class="ph-corn"><span id="pCorn">10</span><small>玉米</small></div></div>
+  <div class="ph-info"><div class="ev-round" id="pRound">回合 1 / 10</div><span id="pMove"></span><b id="pPlace">連線中…</b><span id="pDesc"></span></div>
+  <button class="big h" id="bH">分享<small>合作</small></button>
+  <button class="big s" id="bS">私藏<small>留給自己</small></button>
+  <div class="ph-msg" id="pMsg"></div>
+  <div class="ph-log" id="pLog"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const CELLS=[
+  ["登陸點","經過或停在起點，全員 +1"],
+  ["凜冬將至","全員 −2・分享 −1"],
+  ["不明疾病","全員 −2・分享 −1"],
+  ["原住民的協助","全員 +2"],
+  ["野獸侵襲","全員 −1・分享 −1"],
+  ["豐收慶典","全員 +3"],
+  ["皮毛交易","全員 +2"],
+  ["土地分配","全員 +2"]
+];
+const EVENTS=[
+  "登陸普利茅斯。經過或停在起點，全員 +1。",
+  "寒冬缺糧。全員 −2，分享者再 −1。",
+  "疾病蔓延。全員 −2，分享者再 −1。",
+  "原住民教種玉米、捕魚。全員 +2。",
+  "野狼攻擊糧倉。全員 −1，分享者再 −1。",
+  "共慶豐收。全員 +3。",
+  "以物易物，換得玉米。全員 +2。",
+  "田地分給各家自耕。全員 +2。"
+];
+const MOD=[{},{sd:-1},{sd:-1},{},{sd:-1},{},{},{}];
+/* 出牌結算值：全員分享 / 全員私藏 / 有人私藏時（分享者、私藏者） */
+const PAY={all:1,allHide:-2,share:-2,hide:3};
+const ARR=[1,-2,-2,2,-1,3,2,2];
+const NAMES=["布拉德福家族","布魯斯特家族","奧爾登家族","斯坦迪什家族"];
+const CARD={h:"分享",s:"私藏"};
+const TC=t=>`var(--t${t})`;
+const brk=t=>t.replace(/。/g,"。\n").trim();
+const paint=t=>t.replace(new RegExp(NAMES.join("|"),"g"),m=>`<span style="color:${TC(NAMES.indexOf(m))};font-weight:700">${m}</span>`).replace(/分享/g,'<span class="tg">分享</span>').replace(/私藏/g,'<span class="tk">私藏</span>');
+const Q=new URLSearchParams(location.search), HID=Q.get("h"), TN=+Q.get("t");
+(HID&&TN>=1&&TN<=4)?phone():host();
+
+/* ===================== 主持人 ===================== */
+function host(){
+  $("phoneApp").hidden=true;
+  let S, peer, hostId=null;
+  const conns=[null,null,null,null];
+  const fresh=()=>S={hideCount:0,pos:0,round:1,phase:"roll",dice:"?",move:"點「擲骰子前進」開始。",log:"",
+    teams:NAMES.map(n=>({name:n,corn:10,pick:null,shown:null}))};
+  fresh();
+  const alive=()=>S.teams.filter(t=>t.corn>0);
+  const winners=()=>{
+    const al=alive();
+    if(al.length===1) return al;
+    if(S.round>10 || (S.round===10 && S.phase==="roll" && S.log!=="")){
+      const maxC=Math.max(...S.teams.map(t=>t.corn));
+      return S.teams.filter(t=>t.corn===maxC);
+    }
+    return [];
+  };
+  const endMsg=()=>{
+    const al=alive();
+    if(al.length===1) return `遊戲結束：🏆 ${al[0].name} 唯一存活，獲勝！`;
+    if(S.round>10){
+      const w=winners();
+      if(w.length>1) return `遊戲結束：平手！🏆 ${w.map(t=>t.name).join("、")} 同分獲勝（各 ${w[0].corn} 玉米）`;
+      if(w.length===1) return `遊戲結束：🏆 ${w[0].name} 以 ${w[0].corn} 玉米獲勝！`;
+    }
+    if(al.length===0) return "全員淘汰，無人獲勝";
+    return "";
+  };
+  const live=i=>conns[i]&&conns[i].open;
+
+  function roll(){
+    const d=1+Math.floor(Math.random()*3), old=S.pos; S.pos=(old+d)%8; S.dice=d;
+    const notes=[`前進 ${d} 步`];
+    const bonus=(n,w)=>{alive().forEach(t=>t.corn+=n);if(w)notes.push(w)};
+    if(S.pos<old&&S.pos!==0) bonus(1,"經過起點 +1。");
+    if(ARR[S.pos]) bonus(ARR[S.pos]);
+    S.move=notes.join("\n"); S.log=endMsg(); S.phase="pick"; S.teams.forEach(t=>{t.pick=null;t.shown=null}); render();
+  }
+  function settle(){
+    const act=alive(), before=act.map(t=>t.corn);
+    const h=act.filter(t=>t.pick==="h"), sp=act.filter(t=>t.pick==="s");
+    const n=act.length,k=h.length,M=MOD[S.pos];
+    if(k===0){S.hideCount++;act.forEach(t=>t.corn+=PAY.allHide-(S.hideCount-1))}
+    else if(k===n)act.forEach(t=>t.corn+=PAY.all);
+    else{h.forEach(t=>t.corn+=PAY.share);sp.forEach(t=>t.corn+=PAY.hide)}
+    h.forEach(t=>t.corn+=M.sd||0);
+    const f=n=>(n>=0?"+":"−")+Math.abs(n);
+    const dOf=t=>t.corn-before[act.indexOf(t)];
+    const parts=[];
+    if(h.length)parts.push(`分享 ${f(dOf(h[0]))}`);
+    if(sp.length)parts.push(`私藏 ${f(dOf(sp[0]))}`);
+    const out=act.filter(t=>t.corn<=0).map(t=>t.name);
+    S.teams.forEach(t=>{t.shown=t.pick;t.pick=null});
+    
+    if(alive().length > 1) {
+      S.round++;
+    }
+    
+    S.log=`${sp.length} 私藏 ${h.length} 分享\n結算：${parts.join(" ")}`+(k===0?`（第 ${S.hideCount} 次全私藏）`:"")+(out.length?`\n淘汰：${out.join("、")}`:"")+(endMsg()?"\n"+endMsg():"");
+    S.phase="roll"; S.dice="?"; render();
+  }
+
+  function render(){
+    const RING=[
+      {idx:0, r:1, c:1, ar:"→"},
+      {idx:1, r:1, c:2, ar:"→"},
+      {idx:2, r:1, c:3, ar:"↓"},
+      {idx:7, r:2, c:1, ar:"↑"},
+      {idx:3, r:2, c:3, ar:"↓"},
+      {idx:6, r:3, c:1, ar:"↑"},
+      {idx:5, r:3, c:2, ar:"←"},
+      {idx:4, r:3, c:3, ar:"←"}
+    ];
+    const curRound = Math.min(S.round, 10);
+    const ringHtml = RING.map(item=>{
+      const i = item.idx;
+      return `<div class="cell${i===S.pos?" on":""}" style="grid-row:${item.r};grid-column:${item.c}">
+        ${i+1}. ${CELLS[i][0]}<small>${CELLS[i][1]}</small>
+        <i class="ar a${i}" aria-hidden="true">${item.ar}</i>
+      </div>`;
+    }).join("");
+
+    const centerHtml = `
+      <div class="event">
+        <div class="ev-round">回合 ${curRound} / 10</div>
+        <span id="evMove">${S.move}</span>
+        <b id="evName">${S.pos+1}. ${CELLS[S.pos][0]}</b>
+        <span id="evDesc">${brk(EVENTS[S.pos])}</span>
+      </div>`;
+
+    $("board").innerHTML = ringHtml + centerHtml;
+    $("dice").textContent=S.dice+" 步";$("dice").classList.toggle("idle",S.dice==="?"); $("log").innerHTML=paint(S.log);$("log").hidden=!S.log;
+    const over=!!endMsg(), ready=alive().every(t=>t.pick), mb=$("mainBtn");
+    if(over){mb.textContent=winners().length?"🏆 "+winners().map(t=>t.name).join("、")+" 獲勝":"遊戲結束";mb.disabled=true}
+    else if(S.phase==="roll"){mb.textContent="擲骰子前進";mb.disabled=false;mb.onclick=roll}
+    else{mb.textContent=ready?"亮牌並結算":`等待出牌（${alive().filter(t=>t.pick).length} / ${alive().length}）`;mb.disabled=!ready;mb.onclick=settle}
+
+    $("teams").innerHTML=S.teams.map((t,i)=>{
+      const out=t.corn<=0; let chip;
+      if(over&&winners().includes(t)) chip='<span class="chip h">🏆 獲勝</span>';
+      else if(out) chip='<span class="chip wait">已淘汰</span>';
+      else if(S.phase==="roll") chip=t.shown?`<span class="chip ${t.shown}">${CARD[t.shown]}</span>`:'<span class="chip wait">等待擲骰</span>';
+      else chip=t.pick?'<span class="chip done">✓ 已出牌</span>':'<span class="chip think">思考中…</span>';
+      const manual=(!out&&S.phase==="pick"&&!live(i))?`<div class="manual"><button data-i="${i}" data-v="h">分享</button><span>/</span><button data-i="${i}" data-v="s">私藏</button></div>`:"";
+      return `<div class="tcell${out?" out":""}" style="--tc:var(--t${i})"><div class="head"><b><span class="dot${live(i)?" on":""}"></span>${t.name}</b>${chip}</div><div class="c">${Math.max(0,t.corn)}<small>玉米</small></div>${manual}</div>`}).join("");
+    document.querySelectorAll(".qr .st").forEach((e,i)=>e.textContent=live(i)?"已連線":"未連線");
+    push();
+  }
+  function push(){
+    const curRound = Math.min(S.round, 10);
+    S.teams.forEach((t,i)=>{ if(!live(i))return;
+      conns[i].send({t:"s",round:curRound,name:t.name,corn:Math.max(0,t.corn),out:t.corn<=0,phase:S.phase,place:`${S.pos+1}. ${CELLS[S.pos][0]}`,desc:EVENTS[S.pos],move:S.move,pick:t.pick,shown:t.shown,log:S.log,over:!!endMsg(),won:winners().includes(t),winners:winners().map(x=>x.name)});
+    });
+  }
+  $("teams").addEventListener("click",e=>{const b=e.target.closest("button[data-i]");if(!b||S.phase!=="pick")return;S.teams[b.dataset.i].pick=b.dataset.v;render()});
+
+  /* 連線 */
+  const net=m=>$("net").textContent=m;
+  function drawQR(){
+    const base=location.href.split("#")[0].split("?")[0];
+    $("qrs").innerHTML=NAMES.map((n,i)=>{
+      const url=`${base}?h=${hostId}&t=${i+1}`; let img="";
+      try{const q=qrcode(0,"M");q.addData(url);q.make();img=`<img alt="${n} QR code" src="${q.createDataURL(5,2)}">`}catch(e){img=`<a href="${url}" target="_blank" rel="noopener">開啟連結</a>`}
+      return `<div class="qr" style="--tc:var(--t${i})">${img}<div class="nm">${n}</div><div class="st">未連線</div></div>`}).join("");
+  }
+  function start(id){
+    peer=new Peer(id);
+    peer.on("open",i=>{hostId=i;try{localStorage.setItem("mf_host",i)}catch(e){}net("就緒。請各組掃描 QR code，勿重新整理。");drawQR();render()});
+    peer.on("error",e=>{
+      if(e.type==="unavailable-id"){start("mf"+Math.random().toString(36).slice(2,8))}
+      else net("連線失敗（"+e.type+"），請重新整理。");
+    });
+    peer.on("disconnected",()=>{net("連線中斷，重連中…");peer.reconnect()});
+    peer.on("connection",c=>{
+      c.on("data",d=>{
+        if(!d||typeof d!=="object")return; const i=(+d.team||0)-1; if(i<0||i>3)return;
+        if(d.t==="hello"){conns[i]=c;render()}
+        else if(d.t==="pick"&&conns[i]===c&&S.phase==="pick"&&S.teams[i].corn>0&&(d.v==="h"||d.v==="s")){S.teams[i].pick=d.v;render()}
+      });
+      c.on("close",()=>{conns.forEach((x,i)=>{if(x===c)conns[i]=null});render()});
+    });
+  }
+  let saved=null;try{saved=localStorage.getItem("mf_host")}catch(e){}
+  start(saved||"mf"+Math.random().toString(36).slice(2,8));
+
+  /* 重置 */
+  let rt=null;
+  $("resetAll").onclick=()=>{
+    const b=$("resetAll");
+    if(!rt){b.textContent="再按一次確認重置";rt=setTimeout(()=>{rt=null;b.textContent="重新開始遊戲"},3000);return}
+    clearTimeout(rt);rt=null;b.textContent="重新開始遊戲";
+    fresh();render();
+  };
+  render();
+}
+
+/* ===================== 手機 ===================== */
+function phone(){
+  $("hostApp").hidden = true;
+  $("phoneApp").hidden = false;
+
+  let peer,conn,st=null,retry=null;
+  $("pName").textContent=NAMES[TN-1];$("phoneApp").style.setProperty("--tc",`var(--t${TN-1})`);
+  const msg=m=>$("pMsg").textContent=m;
+  function draw(){
+    if(!st){$("bH").disabled=$("bS").disabled=true;return}
+    $("pName").textContent=st.name;$("pCorn").textContent=st.corn;
+    if(st.round) $("pRound").textContent=`回合 ${st.round} / 10`;
+    $("pPlace").textContent=st.place;$("pMove").textContent=st.move||"";$("pDesc").textContent=brk(st.desc);$("pLog").innerHTML=paint(st.log);
+    const can=st.phase==="pick"&&!st.out&&!st.over;
+    $("bH").disabled=$("bS").disabled=!can;
+    const ch=st.phase==="pick"?st.pick:st.shown;
+    $("bH").classList.toggle("sel",ch==="h");$("bS").classList.toggle("sel",ch==="s");
+    msg(st.over?(st.winners&&st.winners.length?`🏆 ${st.winners.join("、")} 獲勝！`+(st.won?"（就是你！）":""):"遊戲結束"):st.out?"你已淘汰":st.phase==="roll"?(st.shown?`本回合你選了${CARD[st.shown]}，等待擲骰…`:"等待擲骰…"):st.pick?`已選${CARD[st.pick]}，亮牌前可改`:"請選擇出牌");
+  }
+  function pick(v){if(conn&&conn.open){conn.send({t:"pick",team:TN,v});if(st){st.pick=v;draw()}}}
+  $("bH").onclick=()=>pick("h");$("bS").onclick=()=>pick("s");
+  function again(){clearTimeout(retry);retry=setTimeout(connect,2000)}
+  function connect(){
+    if(!peer||peer.destroyed)return init();
+    if(peer.disconnected){peer.reconnect()}
+    conn=peer.connect(HID,{reliable:true}); const c=conn;
+    c.on("open",()=>{c.send({t:"hello",team:TN});msg("已連線")});
+    c.on("data",d=>{if(d&&d.t==="s"){st=d;draw()}});
+    c.on("close",()=>{msg("斷線，重連中…");again()});
+  }
+  function init(){
+    peer=new Peer();
+    peer.on("open",connect);
+    peer.on("disconnected",()=>peer.reconnect());
+    peer.on("error",e=>{msg(e.type==="peer-unavailable"?"找不到主持人…":"連線問題，重試…");again()});
+  }
+  draw();msg("連線中…");init();
+}
+</script>
+</body>
+</html>
